@@ -2,6 +2,7 @@ import numpy as np
 from csv import DictReader
 from time import time
 import matplotlib.pyplot as plt
+from subprocess import call
 
 print("library loaded!")
 
@@ -32,11 +33,14 @@ def fetch():
 
     return data['x'], data['x1'], data['x2'], data['x3'], data['y']
 
-def compute_gradient(w, b, x, y, iters, alpha):
+def compute_gradient(w, b, x, y, max_iters, initial_alpha=0.01, epsilon=1e-9):
     m = len(y)
     n = len(w)
+    alpha = initial_alpha
 
-    for iteration in range(iters):
+    prev_cost = float('inf')
+
+    for iteration in range(max_iters):
         predictions = np.dot(x, w) + b
         errors = predictions - y
 
@@ -46,8 +50,24 @@ def compute_gradient(w, b, x, y, iters, alpha):
 
         b_val = np.sum(errors) / m
         b -= alpha * b_val
-        
-        print(f"{iteration}: {w[0]:.2f} {w[1]:.2f} {w[2]:.2f} {b:.2f}")
+
+        cost = cost_func(w, b, x, y)
+
+        if iteration % 100 == 0:
+            print(f"Iteration {iteration}: Cost {cost:.6f}")
+
+        if abs(prev_cost - cost) < epsilon:
+            print(f"Converged at iteration {iteration}")
+            break
+
+        if cost > prev_cost:
+            # If cost increases, reduce learning rate
+            alpha *= 0.5
+            print(f"Reducing learning rate to {alpha}")
+
+        prev_cost = cost
+
+    return w, b
 
 def plott(x1,x2,x3,y):
     plt.scatter(x1,y,label="x1",marker=".",c="r")
@@ -59,11 +79,6 @@ def plott(x1,x2,x3,y):
     plt.legend()
     plt.show()
 
-def normalize_feature(feature):
-    mean = np.mean(feature)
-    std_dev = np.std(feature)
-    normalized_feature = (feature - mean) / std_dev
-    return normalized_feature
 
 def main():
     x, x1, x2, x3, y = fetch()
@@ -76,22 +91,27 @@ def main():
 
     t = time()
 
-    compute_gradient(w, b, x, y, iters, alpha)
+    w, b = compute_gradient(w, b, x, y, max_iters=10000)
 
     t = time() - t
     t*=1000
 
+    call("cls",shell=True)
+
     print(f"finished in: {t:.0f}ms")
 
     print(f"{w[0]:.2f} {w[1]:.2f} {w[2]:.2f} {b:.2f}")
-    x_str = input("enter x: ")
-    x_in = np.array([float(num) for num in x_str.split(',')])
+    try:
+     while True:
+        x_str = input("enter x: ")
+        x_in = np.array([float(num) for num in x_str.split(',')])
     
-    y_hat = f(w, b, x_in)
+        y_hat = f(w, b, x_in)
 
-    print(f"y prediction: {y_hat:.2f}")
+        print(f"y prediction: {y_hat:.2f}")
+    except KeyboardInterrupt:
 
-    #plott(x1,x2,x3,y)
+        plott(x1,x2,x3,y)
 
 if __name__ == "__main__":
     main()
